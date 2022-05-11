@@ -1,104 +1,47 @@
 pipeline {
     agent any
-    environment {
-        DOCKERHUB_CREDENTIALS= credentials('dockerhub')
+
+       environment {
+        DOCKERHUB_CREDENTIALS = credentials('delta')
     }
+
     stages {
         stage('Build') {
             steps {
-                
-                sh '''
-                echo 'Build '
-                docker-compose  build  build-agent
-                docker-compose logs > build_logs.txt
-                '''
-            }
-                  
-            post {
-                success {
-                    echo 'Success BUILD!'
-                    emailext attachLog: true,
-                    body: "${currentBuild.currentResult}: Job ${env.JOB_NAME} build ${env.BUILD_NUMBER}",
-                    recipientProviders: [developers(), requestor()],
-                    subject: "Success Jenkins Build",
-                    to: 'adrian.dabrowski199@gmail.com'
-                }
-            
-                failure {
-                    echo 'Success BUILD!'
-                    emailext attachLog: true,
-                    body: "${currentBuild.currentResult}: Job ${env.JOB_NAME} build ${env.BUILD_NUMBER}",
-                    recipientProviders: [developers(), requestor()],
-                    subject: "Failed Jenkins Build",
-                    to: 'adrian.dabrowski199@gmail.com'
+                echo 'Building...'
+                dir('ITE/GCL08/SZ400605/Lab05') {
+                    sh 'docker build . -f dockerB.dockerfile -t build-chat'
                 }
             }
         }
-        stage('Test') {
+        
+        stage('Tests') {
             steps {
-                sh '''
-                echo 'Testing'
-                docker-compose  build  test-agent
-                docker-compose  up --force-recreate -d test-agent
-                '''
-
-            }
-               post {
-                success {
-                    echo 'Success TESTS!'
-                    emailext attachLog: true,
-                    body: "${currentBuild.currentResult}: Job ${env.JOB_NAME} build ${env.BUILD_NUMBER}",
-                    recipientProviders: [developers(), requestor()],
-                    subject: "Success Jenkins Tests",
-                    to: 'adrian.dabrowski199@gmail.com'
-                }
-            
-                failure {
-                    echo 'Failure TESTS!'
-                    emailext attachLog: true,
-                    body: "${currentBuild.currentResult}: Job ${env.JOB_NAME} build ${env.BUILD_NUMBER}",
-                    recipientProviders: [developers(), requestor()],
-                    subject: "Failed Jenkins Tests",
-                    to: 'adrian.dabrowski199@gmail.com'
+                echo 'Testing...'
+                dir('ITE/GCL08/SZ400605/Lab05') {
+                    sh 'docker build . -f dockerT.dockerfile -t test-chat'
                 }
             }
         }
+        
         stage('Deploy') {
             steps {
-                archiveArtifacts(artifacts: '**/*.txt', followSymlinks: false)
+                echo 'Deploying...'
+                sh 'echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin'
                 sh '''
-                echo 'Deploy'
-                docker-compose  up -d build-agent
-                echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin
-                docker images
-                docker tag build-agent:latest adriandabrowski/jenkins
-                docker push adriandabrowski/jenkins
-                
+                docker tag build-chat:latest luxikhs/devops-deploy
+                docker push luxikhs/devops-deploy
                 '''
             }
-
-               post {
-                   always{
-                       sh 'docker logout'
-                   }
-
-                    success {
-                    echo 'Success DEPLOY!'
-                    emailext attachLog: true,
-                    body: "${currentBuild.currentResult}: Job ${env.JOB_NAME} build ${env.BUILD_NUMBER}",
-                    recipientProviders: [developers(), requestor()],
-                    subject: "Success Jenkins Deploy",
-                    to: 'adrian.dabrowski199@gmail.com'
+        }
+        
+        stage('Publish') {
+            steps {
+                echo 'Publishing...'
+                dir('ITE/GCL08/SZ400605/Lab05') {
+                    sh 'docker build . -f dockP.dockerfile -t publish-chat'
                 }
-            
-                failure {
-                    echo 'Failure DEPLOY!'
-                    emailext attachLog: true,
-                    body: "${currentBuild.currentResult}: Job ${env.JOB_NAME} build ${env.BUILD_NUMBER}",
-                    recipientProviders: [developers(), requestor()],
-                    subject: "Failed Jenkins Deploy",
-                    to: 'adrian.dabrowski199@gmail.com'
-                }
+                sh "docker run --volume /var/jenkins_home/workspace/deltachat_pipe/ITE/GCL08/SZ400605/Lab05:/finalArchive publish-chat mv archive.tar.xz /finalArchive"
             }
         }
     }
