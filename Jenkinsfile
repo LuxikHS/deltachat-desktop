@@ -38,8 +38,7 @@ pipeline {
         stage('Publish') {
             steps {
                 echo 'Publishing...'
-                    sh 'docker build . -f dockP.dockerfile -t publish-chat'
-                
+                    sh 'docker build . -f dockerP.dockerfile -t publish-chat'
                 sh "docker run --volume /var/jenkins_home/workspace/deltachat_pipe/ITE/GCL08/SZ400605/Lab05:/finalArchive publish-chat mv archive.tar.xz /finalArchive"
             }
         }
