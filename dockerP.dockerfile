@@ -1,3 +1,3 @@
 FROM build-chat:latest
 
-RUN tar cfJ archive.tar.xz build
+RUN tar cfJ deltaDesktop.tar.xz build
