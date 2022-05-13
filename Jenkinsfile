@@ -39,7 +39,10 @@ pipeline {
             steps {
                 echo 'Publishing...'
                     sh 'docker build . -f dockerP.dockerfile -t publish-chat'
-                sh "docker run --volume /var/jenkins_home/workspace/deltachat_pipe/ITE/GCL08/SZ400605/Lab05:/finalArchive publish-chat mv archive.tar.xz /finalArchive"
+                sh "docker run --volume /var/jenkins_home/workspace/deltachat_pipe/Lab05:/toTar publish-chat mv deltaDesktop.tar.xz /toTar"
+                  dir('/var/jenkins_home/workspace/deltachat_pipe/Lab05'){
+			        archiveArtifacts artifacts: "deltaDesktop.tar.xz"
+			    }
             }
         }
     }
